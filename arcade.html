@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SAREEN CHOYI — PORTFOLIO ARCADE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep: #0B0420;
+    --bg-panel: #170B3B;
+    --cyan: #00F0FF;
+    --magenta: #FF2E9A;
+    --yellow: #FFD400;
+    --green: #3CFF7A;
+    --text: #F2F0FA;
+    --text-dim: #9186C4;
+    --font-pixel: 'Press Start 2P', monospace;
+    --font-vt: 'VT323', monospace;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: var(--font-vt);
+    overflow: hidden;
+    -webkit-user-select:none; user-select:none;
+  }
+
+  /* CRT overlay */
+  .crt{
+    position:fixed; inset:0; pointer-events:none; z-index:50;
+    background:
+      repeating-linear-gradient(rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.18) 3px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+    mix-blend-mode: multiply;
+  }
+  .flicker{ position:fixed; inset:0; pointer-events:none; z-index:49; background:#fff; opacity:0; animation: flick 7s infinite; }
+  @keyframes flick{ 0%,96%,100%{opacity:0;} 97%{opacity:0.02;} 98%{opacity:0;} 99%{opacity:0.015;} }
+
+  /* ---------- BOOT SCREEN ---------- */
+  #boot{
+    position:fixed; inset:0; z-index:100; background: var(--bg-deep);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:22px; padding: 24px;
+    background-image: radial-gradient(circle at 50% 30%, #1c0f4a 0%, #0B0420 70%);
+  }
+  .boot-title{
+    font-family: var(--font-pixel); font-size: clamp(20px, 5vw, 40px); color: var(--yellow);
+    text-shadow: 3px 3px 0 var(--magenta), 6px 6px 0 rgba(0,240,255,0.4);
+    letter-spacing: 2px; line-height:1.6;
+  }
+  .boot-sub{ font-family: var(--font-mono); font-size:12px; color: var(--cyan); letter-spacing:0.15em; text-transform:uppercase; }
+  .press-start{
+    font-family: var(--font-pixel); font-size: 16px; color: var(--text); margin-top: 12px;
+    padding: 16px 28px; border: 3px solid var(--cyan); background: transparent; cursor:pointer;
+    animation: blink 1.1s steps(1) infinite;
+  }
+  .press-start:hover{ background: var(--cyan); color: var(--bg-deep); }
+  @keyframes blink{ 50%{ opacity: 0.35; } }
+  .boot-instructions{
+    font-family: var(--font-vt); font-size: 18px; color: var(--text-dim); max-width: 440px; line-height:1.5; margin-top: 8px;
+  }
+  .boot-instructions b{ color: var(--green); }
+  .skip-link{
+    font-family: var(--font-mono); font-size:11px; color: var(--text-dim); text-decoration: underline; text-underline-offset:3px;
+    background:none; border:none; cursor:pointer; margin-top: 6px; letter-spacing:0.05em;
+  }
+  .skip-link:hover{ color: var(--text); }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:fixed; top:0; left:0; right:0; z-index:40; display:none;
+    justify-content:space-between; align-items:center;
+    padding: 14px 20px; font-family: var(--font-pixel); font-size: 10px; color: var(--text);
+    background: linear-gradient(rgba(11,4,32,0.9), transparent);
+  }
+  #hud .hud-left{ display:flex; gap:18px; align-items:center; }
+  #hud .hud-item{ color: var(--cyan); }
+  #hud .hud-item span{ color: var(--yellow); }
+  #hud button{
+    font-family: var(--font-pixel); font-size:9px; background:transparent; color: var(--text-dim);
+    border:1px solid var(--text-dim); padding:8px 10px; cursor:pointer;
+  }
+  #hud button:hover{ color:var(--text); border-color: var(--text); }
+  #hud .hud-right{ display:flex; gap:10px; }
+
+  /* ---------- GAME WORLD ---------- */
+  #gameWrap{ display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:10; }
+  #world{
+    position:relative; width: min(96vw, 960px); aspect-ratio: 16/10;
+    background:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px) 0 0/40px 40px,
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px) 0 0/40px 40px,
+      #140A33;
+    border: 4px solid var(--bg-panel); box-shadow: 0 0 0 2px var(--cyan), 0 0 60px rgba(0,240,255,0.15);
+    overflow: hidden;
+  }
+
+  .station{
+    position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family: var(--font-pixel); font-size: 9px; text-align:center; color: var(--text);
+    transition: filter .2s;
+  }
+  .station .box{
+    width: 56px; height: 44px; border: 3px solid var(--stn-color, var(--cyan));
+    background: rgba(255,255,255,0.03); position:relative;
+    display:flex; align-items:center; justify-content:center; font-size:18px;
+  }
+  .station .box::after{
+    content:''; position:absolute; inset:-3px; border: 1px dashed var(--stn-color, var(--cyan)); opacity:0.4;
+  }
+  .station .label{ margin-top:8px; color: var(--stn-color, var(--cyan)); letter-spacing:1px; }
+  .station.visited .box{ background: rgba(60,255,122,0.12); }
+  .station.visited .label{ color: var(--green); }
+  .station.near .box{ filter: drop-shadow(0 0 8px var(--stn-color, var(--cyan))); }
+
+  .prompt{
+    position:absolute; font-family: var(--font-pixel); font-size:8px; color: var(--yellow);
+    background: var(--bg-panel); border: 2px solid var(--yellow); padding: 5px 8px;
+    white-space:nowrap; opacity:0; transition: opacity .15s; pointer-events:none;
+    transform: translate(-50%, -100%);
+  }
+  .prompt.show{ opacity:1; }
+
+  #player{
+    position:absolute; width: 26px; height: 26px; z-index: 5;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #player .body{
+    width:22px; height:22px; background: var(--magenta); border: 2px solid #fff;
+    position:relative; box-shadow: 0 0 10px rgba(255,46,154,0.7);
+  }
+  #player .eye{ position:absolute; width:4px; height:4px; background:#111; top:6px; }
+  #player .eye.l{ left:4px; } #player .eye.r{ right:4px; }
+  #player.face-left .eye.r{ opacity:0; } 
+  #player.face-right .eye.l{ opacity:0; }
+
+  /* ---------- MOBILE CONTROLS ---------- */
+  #controls{ display:none; position:fixed; bottom: 18px; left:0; right:0; z-index:41; justify-content:space-between; padding: 0 20px; align-items:flex-end; }
+  .dpad{ display:grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3,44px); gap:4px; }
+  .dpad button{
+    background: var(--bg-panel); border: 2px solid var(--cyan); color: var(--cyan);
+    font-family: var(--font-pixel); font-size:12px; touch-action: none;
+  }
+  .dpad button:active{ background: var(--cyan); color: var(--bg-panel); }
+  .dpad .up{ grid-column:2; grid-row:1; } .dpad .left{ grid-column:1; grid-row:2; }
+  .dpad .right{ grid-column:3; grid-row:2; } .dpad .down{ grid-column:2; grid-row:3; }
+  #interactBtn{
+    width:76px; height:76px; border-radius:50%; background: var(--magenta); border:3px solid #fff;
+    color:#fff; font-family: var(--font-pixel); font-size:9px; touch-action:none;
+  }
+
+  /* ---------- MODAL ---------- */
+  #modalOverlay{
+    display:none; position:fixed; inset:0; z-index:60; background: rgba(4,1,16,0.86);
+    align-items:center; justify-content:center; padding: 20px;
+  }
+  #modal{
+    width: min(94vw, 620px); max-height: 82vh; overflow-y:auto;
+    background: var(--bg-panel); border: 4px solid var(--yellow); box-shadow: 0 0 0 2px var(--bg-deep), 0 0 40px rgba(255,212,0,0.25);
+    padding: 26px 28px 30px;
+  }
+  #modal .m-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom: 2px dashed var(--text-dim); padding-bottom:14px;}
+  #modal h2{ font-family: var(--font-pixel); font-size: 16px; color: var(--yellow); letter-spacing:1px; }
+  #modal .m-close{ font-family: var(--font-pixel); font-size:14px; background:none; border:2px solid var(--text-dim); color:var(--text-dim); padding:6px 10px; cursor:pointer; }
+  #modal .m-close:hover{ color:#fff; border-color:#fff; }
+  #modal .m-body{ font-family: var(--font-vt); font-size: 19px; line-height:1.5; color: var(--text); }
+  #modal .m-body p{ margin-bottom:14px; }
+
+  .card-row{ border-top: 1px solid rgba(255,255,255,0.12); padding: 14px 0; }
+  .card-row:first-child{ border-top:none; }
+  .card-row h3{ font-family: var(--font-mono); font-size:15px; color: var(--cyan); margin-bottom:4px; }
+  .card-row .meta{ font-family: var(--font-mono); font-size:11px; color: var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .card-row .tags{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .card-row .tags span{ font-family: var(--font-mono); font-size:9px; border:1px solid var(--text-dim); padding:2px 6px; color: var(--text-dim); }
+
+  .btn-pixel{
+    display:inline-block; margin-top: 16px; font-family: var(--font-pixel); font-size:10px;
+    background: var(--cyan); color: var(--bg-deep); padding: 12px 16px; text-decoration:none; border: 2px solid #fff;
+  }
+  .btn-pixel:hover{ background: var(--yellow); }
+
+  @media (max-width: 720px){
+    #controls{ display:flex; }
+    #modal .m-body{ font-size:17px; }
+  }
+  @media (min-width: 721px){
+    #controls{ display:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="crt"></div>
+<div class="flicker"></div>
+
+<!-- BOOT SCREEN -->
+<div id="boot">
+  <div class="boot-sub">// FICTIVE SYSTEMS PRESENTS</div>
+  <div class="boot-title">SAREEN CHOYI<br>PORTFOLIO ARCADE</div>
+  <button class="press-start" id="startBtn">PRESS START</button>
+  <div class="boot-instructions">
+    Use <b>ARROW KEYS / WASD</b> to walk. Walk up to a station and press <b>ENTER</b> or <b>SPACE</b> to interact.
+    Find all 4 stations to complete the run.
+  </div>
+  <button class="skip-link" id="skipBtn">Skip the game — take me straight to the résumé →</button>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-left">
+    <div class="hud-item">STATIONS <span id="hudCount">0/4</span></div>
+  </div>
+  <div class="hud-right">
+    <button id="muteBtn">SOUND: ON</button>
+    <button id="hudSkip">SKIP →</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="gameWrap">
+  <div id="world">
+    <div class="station" data-id="resume" style="--stn-color: var(--green); left:6%; top:14%;">
+      <div class="box">🖥️</div>
+      <div class="label">RESUME</div>
+    </div>
+    <div class="station" data-id="projects" style="--stn-color: var(--magenta); left:78%; top:14%;">
+      <div class="box">🕹️</div>
+      <div class="label">PROJECTS</div>
+    </div>
+    <div class="station" data-id="blog" style="--stn-color: var(--cyan); left:6%; top:70%;">
+      <div class="box">📰</div>
+      <div class="label">BLOG</div>
+    </div>
+    <div class="station" data-id="contact" style="--stn-color: var(--yellow); left:78%; top:70%;">
+      <div class="box">☎️</div>
+      <div class="label">CONTACT</div>
+    </div>
+
+    <div id="player" class="face-right"><div class="body"><div class="eye l"></div><div class="eye r"></div></div></div>
+  </div>
+</div>
+
+<!-- MOBILE CONTROLS -->
+<div id="controls">
+  <div class="dpad">
+    <button class="up" data-dir="up">▲</button>
+    <button class="left" data-dir="left">◀</button>
+    <button class="right" data-dir="right">▶</button>
+    <button class="down" data-dir="down">▼</button>
+  </div>
+  <button id="interactBtn">TALK</button>
+</div>
+
+<!-- MODAL -->
+<div id="modalOverlay">
+  <div id="modal">
+    <div class="m-head">
+      <h2 id="mTitle">TITLE</h2>
+      <button class="m-close" id="mClose">✕ CLOSE</button>
+    </div>
+    <div class="m-body" id="mBody"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const boot = document.getElementById('boot');
+  const hud = document.getElementById('hud');
+  const gameWrap = document.getElementById('gameWrap');
+  const world = document.getElementById('world');
+  const player = document.getElementById('player');
+  const hudCount = document.getElementById('hudCount');
+  const muteBtn = document.getElementById('muteBtn');
+  const modalOverlay = document.getElementById('modalOverlay');
+  const mTitle = document.getElementById('mTitle');
+  const mBody = document.getElementById('mBody');
+
+  // ---- Content ----
+  const CONTENT = {
+    resume: {
+      title: 'RESUME.EXE',
+      html: `
+        <div class="card-row"><h3>Software Engineer — Berkshire Hathaway Specialty Insurance</h3><div class="meta">[START YEAR] — Present</div><p>Add a line or two on what you actually work on — team, systems, and an impact metric if you have one.</p></div>
+        <div class="card-row"><h3>M.S. Computer Science — Georgia Institute of Technology</h3><div class="meta">[START] — [END/EXPECTED]</div><p>Add your concentration/focus area and any notable coursework or research.</p></div>
+        <div class="card-row"><h3>B.S. Computer Science — San Jose State University</h3><div class="meta">[START] — [END]</div><p>Add relevant coursework, honors, or a capstone project here.</p></div>
+        <a class="btn-pixel" href="#">↓ DOWNLOAD FULL PDF</a>
+      `
+    },
+    projects: {
+      title: 'PROJECTS.DAT',
+      html: `
+        <div class="card-row"><h3>Waylay</h3><div class="meta">Solo · 2025</div><p>A Raft-backed message queue built to explore consensus algorithms hands-on.</p><div class="tags"><span>Go</span><span>Raft</span><span>gRPC</span></div></div>
+        <div class="card-row"><h3>Stackframe</h3><div class="meta">Solo · 2024</div><p>A terminal-based stack trace explorer with jump-to-source support.</p><div class="tags"><span>Rust</span><span>TUI</span></div></div>
+        <div class="card-row"><h3>Latency Atlas</h3><div class="meta">Solo · 2024</div><p>An interactive globe visualizing real-time API latency across regions.</p><div class="tags"><span>TypeScript</span><span>WebGL</span></div></div>
+        <div class="card-row"><h3>Cordon</h3><div class="meta">Team of 2 · 2023</div><p>A policy engine for Kubernetes that catches risky deploys before rollout.</p><div class="tags"><span>Python</span><span>K8s</span></div></div>
+      `
+    },
+    blog: {
+      title: 'BLOG.LOG',
+      html: `
+        <div class="card-row"><h3>Why we rewrote our queue in Go, twice</h3><div class="meta">2026.06 · Infra</div></div>
+        <div class="card-row"><h3>Consensus algorithms, explained with a diner queue</h3><div class="meta">2026.03 · Systems</div></div>
+        <div class="card-row"><h3>The on-call postmortem nobody wants to write</h3><div class="meta">2025.11 · Ops</div></div>
+        <div class="card-row"><h3>Building a terminal UI that doesn't fight the user</h3><div class="meta">2025.08 · Tools</div></div>
+        <a class="btn-pixel" href="#">READ ALL POSTS →</a>
+      `
+    },
+    contact: {
+      title: 'CONTACT.SYS',
+      html: `
+        <p>Let's build something worth a postmortem.</p>
+        <div class="card-row"><h3>Email</h3><div class="meta">sareen@example.com</div></div>
+        <div class="card-row"><h3>GitHub</h3><div class="meta">github.com/sareenchoyi</div></div>
+        <div class="card-row"><h3>LinkedIn</h3><div class="meta">linkedin.com/in/sareenchoyi</div></div>
+      `
+    }
+  };
+
+  // ---- Audio ----
+  let muted = false;
+  let actx = null;
+  function beep(freq, dur){
+    if(muted) return;
+    try{
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator(); const g = actx.createGain();
+      o.type = 'square'; o.frequency.value = freq;
+      g.gain.value = 0.05;
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    }catch(e){}
+  }
+
+  // ---- Game state ----
+  const WORLD = {w: 100, h: 100}; // percentage-space units
+  let pos = {x: 50, y: 50};
+  const speed = 32; // units/sec
+  const keys = {up:false, down:false, left:false, right:false};
+  const stationsEl = Array.from(document.querySelectorAll('.station'));
+  const stations = stationsEl.map(el => {
+    const left = parseFloat(el.style.left);
+    const top = parseFloat(el.style.top);
+    return {el, id: el.dataset.id, x: left + 4, y: top + 6, w: 10, h: 12, visited:false, prompt:null};
+  });
+  let visitedCount = 0;
+  let nearStation = null;
+  let running = false;
+  let lastTime = null;
+
+  // Create prompt elements
+  stations.forEach(s => {
+    const p = document.createElement('div');
+    p.className = 'prompt';
+    p.textContent = 'ENTER ▸ OPEN';
+    p.style.left = (s.x) + '%';
+    p.style.top = (s.y - 2) + '%';
+    world.appendChild(p);
+    s.prompt = p;
+  });
+
+  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+  function updatePlayerVisual(){
+    player.style.left = pos.x + '%';
+    player.style.top = pos.y + '%';
+  }
+
+  function rectsOverlap(ax,ay,aw,ah, bx,by,bw,bh){
+    return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
+  }
+
+  function loop(ts){
+    if(!running) return;
+    if(lastTime === null) lastTime = ts;
+    const dt = (ts - lastTime) / 1000;
+    lastTime = ts;
+
+    let dx = 0, dy = 0;
+    if(keys.up) dy -= 1;
+    if(keys.down) dy += 1;
+    if(keys.left) dx -= 1;
+    if(keys.right) dx += 1;
+    if(dx !== 0 || dy !== 0){
+      const len = Math.sqrt(dx*dx + dy*dy);
+      dx /= len; dy /= len;
+      pos.x = clamp(pos.x + dx * speed * dt * 0.55, 2, 92);
+      pos.y = clamp(pos.y + dy * speed * dt, 4, 88);
+      if(dx < 0) player.classList.add('face-left'), player.classList.remove('face-right');
+      if(dx > 0) player.classList.add('face-right'), player.classList.remove('face-left');
+    }
+    updatePlayerVisual();
+
+    // proximity check
+    let closest = null;
+    stations.forEach(s => {
+      const overlap = rectsOverlap(pos.x-3, pos.y-3, 6, 6, s.x-2, s.y-2, s.w+4, s.h+4);
+      s.el.classList.toggle('near', overlap);
+      s.prompt.classList.toggle('show', overlap);
+      if(overlap) closest = s;
+    });
+    nearStation = closest;
+
+    requestAnimationFrame(loop);
+  }
+
+  function openStation(s){
+    if(!s) return;
+    if(!s.visited){
+      s.visited = true;
+      s.el.classList.add('visited');
+      visitedCount++;
+      hudCount.textContent = visitedCount + '/4';
+      beep(880, 0.12);
+    } else {
+      beep(440, 0.08);
+    }
+    const data = CONTENT[s.id];
+    mTitle.textContent = data.title;
+    mBody.innerHTML = data.html;
+    modalOverlay.style.display = 'flex';
+    running = false;
+  }
+
+  function closeModal(){
+    modalOverlay.style.display = 'none';
+    running = true;
+    lastTime = null;
+    requestAnimationFrame(loop);
+  }
+
+  // ---- Input ----
+  const keyMap = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
+  window.addEventListener('keydown', (e) => {
+    if(keyMap[e.code]){ keys[keyMap[e.code]] = true; e.preventDefault(); }
+    if((e.code === 'Enter' || e.code === 'Space')){
+      e.preventDefault();
+      if(modalOverlay.style.display === 'flex'){ closeModal(); }
+      else if(nearStation){ openStation(nearStation); }
+    }
+    if(e.code === 'Escape'){ closeModal(); }
+  });
+  window.addEventListener('keyup', (e) => {
+    if(keyMap[e.code]){ keys[keyMap[e.code]] = false; }
+  });
+
+  // Mobile dpad
+  document.querySelectorAll('.dpad button').forEach(btn => {
+    const dir = btn.dataset.dir;
+    const on = (e) => { e.preventDefault(); keys[dir] = true; };
+    const off = (e) => { e.preventDefault(); keys[dir] = false; };
+    btn.addEventListener('touchstart', on); btn.addEventListener('touchend', off);
+    btn.addEventListener('mousedown', on); btn.addEventListener('mouseup', off);
+    btn.addEventListener('mouseleave', off);
+  });
+  document.getElementById('interactBtn').addEventListener('click', () => {
+    if(modalOverlay.style.display === 'flex'){ closeModal(); }
+    else if(nearStation){ openStation(nearStation); }
+  });
+
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e) => { if(e.target === modalOverlay) closeModal(); });
+
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    muteBtn.textContent = 'SOUND: ' + (muted ? 'OFF' : 'ON');
+  });
+
+  function startGame(){
+    boot.style.display = 'none';
+    hud.style.display = 'flex';
+    gameWrap.style.display = 'flex';
+    updatePlayerVisual();
+    running = true;
+    lastTime = null;
+    beep(660, 0.15);
+    requestAnimationFrame(loop);
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('skipBtn').addEventListener('click', () => {
+    startGame();
+    setTimeout(() => openStation(stations.find(s => s.id === 'resume')), 200);
+  });
+  document.getElementById('hudSkip').addEventListener('click', () => {
+    openStation(stations.find(s => s.id === 'resume'));
+  });
+
+})();
+</script>
+</body>
+</html>
