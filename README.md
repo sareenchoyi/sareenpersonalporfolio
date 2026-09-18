@@ -4,6 +4,7 @@ Two static, dependency-free pages:
 
 - [`index.html`](./index.html) — blueprint/schematic-themed portfolio (site root, `/`)
 - [`arcade.html`](./arcade.html) — retro arcade-game themed portfolio (`/arcade`)
+- [`agent-wallet.html`](./agent-wallet.html) — SpendOS case study (`/agent-wallet`)
 
 No build step, no framework, no npm dependencies. Both pages pull fonts from Google
 Fonts over a CDN `<link>` and are otherwise self-contained HTML/CSS/JS.
@@ -25,6 +26,7 @@ or `http://localhost:3000/arcade.html` for the arcade page.
 
 - `/` → `index.html`
 - `/arcade` → `arcade.html` (the `.html` URL redirects to the clean one)
+- `/agent-wallet` → `agent-wallet.html` (the `.html` URL redirects to the clean one)
 
 No other config is needed — this is otherwise a zero-config static deploy.
 

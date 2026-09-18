@@ -1,0 +1,9 @@
+{
+  "name": "spendos-agent-wallet-eval",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "evaluate": "node src/evaluate.mjs"
+  }
+}
